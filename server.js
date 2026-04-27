@@ -4,18 +4,11 @@ import uploadRoute from "./routes/uploadRoute.js";
 
 const app = express();
 
-app.use(cors({
-  origin: [
-    "http://localhost:3000",
-    "https://ghostpandaai.vercel.app"
-  ],
-  methods: ["GET", "POST"],
-  credentials: true
-}));
+// ✅ TEMPORARY OPEN CORS
+app.use(cors());
 
 app.use(express.json());
 
-// ✅ route
 app.use("/upload", uploadRoute);
 
 app.get("/", (req, res) => {
