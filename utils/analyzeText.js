@@ -1,36 +1,74 @@
-export const analyzeText = (text) => {
-  const skillsDB = [
-    "react",
-    "javascript",
-    "html",
-    "css",
-    "node",
-    "mongodb",
-    "express",
-    "typescript",
+export const analyzeText = (resume, jobDesc = "") => {
+  const resumeText = resume.toLowerCase();
+  const jdText = jobDesc.toLowerCase();
+
+  const skills = [
+    "react", "javascript", "html", "css",
+    "node", "mongodb", "express", "typescript"
   ];
 
-  const lower = text.toLowerCase();
+  let matched = [];
+  let missing = [];
 
-  const matchedSkills = skillsDB.filter(skill =>
-    lower.includes(skill)
+  skills.forEach(skill => {
+    const inResume = resumeText.includes(skill);
+    const inJD = jdText.includes(skill);
+
+    if (inResume && inJD) {
+      matched.push(skill);
+    } else if (inJD && !inResume) {
+      missing.push(skill);
+    }
+  });
+
+  const jdSkills = skills.filter(skill => jdText.includes(skill));
+
+  const keywordMatch = jdSkills.length
+    ? Math.round((matched.length / jdSkills.length) * 100)
+    : 0;
+
+  let formatScore = 0;
+  if (resumeText.includes("education")) formatScore += 20;
+  if (resumeText.includes("experience")) formatScore += 20;
+  if (resumeText.includes("skills")) formatScore += 20;
+  if (resumeText.length > 500) formatScore += 20;
+  if (resumeText.includes("project")) formatScore += 20;
+
+  let contentScore = 0;
+  const actionWords = [
+    "developed", "built", "created",
+    "designed", "implemented", "led"
+  ];
+
+  actionWords.forEach(word => {
+    if (resumeText.includes(word)) {
+      contentScore += 15;
+    }
+  });
+
+  if (resumeText.match(/\d+/)) contentScore += 20;
+
+  contentScore = Math.min(contentScore, 100);
+
+  const score = Math.round(
+    (keywordMatch * 0.4) +
+    (formatScore * 0.3) +
+    (contentScore * 0.3)
   );
-
-  const missingSkills = skillsDB.filter(
-    skill => !matchedSkills.includes(skill)
-  );
-
-  const score = Math.min(100, 50 + matchedSkills.length * 10);
 
   return {
     score,
-    skills: matchedSkills, // 🔥 IMPORTANT (frontend ke liye)
-    missingSkills,
+    keywordScore: keywordMatch,
+    formatScore,
+    contentScore,
+    skills: matched,
+    missingSkills: missing,
+    jdSkillsCount: jdSkills.length,
     suggestions: [
       "Add measurable achievements",
-      "Improve ATS keywords",
       "Use action verbs",
-      "Add more technical skills",
-    ],
+      "Improve ATS keywords",
+      "Add relevant skills from JD"
+    ]
   };
 };
