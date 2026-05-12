@@ -1,5 +1,5 @@
+import PDFParser from "pdf2json";
 import { analyzeText } from "../utils/analyzeText.js";
-import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 
 export const analyzeResume = async (req, res) => {
   try {
@@ -9,50 +9,46 @@ export const analyzeResume = async (req, res) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const {
-      userName,
-      userEmail,
-      jobTitle,
-      experience,
-      jobDescription
-    } = req.body;
-
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded" });
     }
 
-    const uint8Array = new Uint8Array(req.file.buffer);
-    const pdf = await pdfjsLib.getDocument({ data: uint8Array }).promise;
+    const { userName, userEmail, jobTitle, experience, jobDescription } = req.body;
 
-    let resumeText = "";
+    // PDF extract using pdf2json
+    const pdfParser = new PDFParser();
 
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-      const strings = content.items.map(item => item.str || "");
-      resumeText += strings.join(" ") + " ";
-    }
+    pdfParser.on("pdfParser_dataError", (errData) => {
+      res.status(500).json({ error: "PDF parse failed" });
+    });
 
-    console.log("RESUME TEXT:", resumeText.slice(0, 300));
+    pdfParser.on("pdfParser_dataReady", (pdfData) => {
+      let text = "";
 
-    // 🔥 REAL ANALYSIS
-    const result = analyzeText(resumeText, jobDescription);
+      pdfData.Pages.forEach((page) => {
+        page.Texts.forEach((item) => {
+          item.R.forEach((r) => {
+            text += decodeURIComponent(r.T) + " ";
+          });
+        });
+      });
 
-   return res.json({
-  success: true,
+      const result = analyzeText(text, jobDescription);
 
-  // ✅ ADD THIS
-  name: userName,
-  email: userEmail,
-  jobTitle: jobTitle,
-  experience: experience,
+      return res.json({
+        success: true,
+        name: userName,
+        email: userEmail,
+        jobTitle,
+        experience,
+        ...result,
+      });
+    });
 
-  // existing
-  ...result
-});
+    pdfParser.parseBuffer(req.file.buffer);
 
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Analysis failed" });
+    console.log(error);
+    return res.status(500).json({ error: "Analysis failed" });
   }
 };

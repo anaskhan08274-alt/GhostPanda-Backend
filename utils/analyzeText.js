@@ -1,64 +1,84 @@
 export const analyzeText = (resume, jobDesc = "") => {
-  const resumeText = resume.toLowerCase();
-  const jdText = jobDesc.toLowerCase();
+  console.log("NEW ANALYZE LOGIC RUNNING");
+  const resumeText = resume.toLowerCase().replace(/\s+/g, " ");
+  const jdText = jobDesc.toLowerCase().replace(/\s+/g, " ");
 
   const skills = [
-    "react", "javascript", "html", "css",
-    "node", "mongodb", "express", "typescript"
+    "react",
+    "javascript",
+    "html",
+    "css",
+    "node",
+    "mongodb",
+    "express",
+    "typescript",
   ];
 
   let matched = [];
   let missing = [];
 
-  skills.forEach(skill => {
+  skills.forEach((skill) => {
     const inResume = resumeText.includes(skill);
     const inJD = jdText.includes(skill);
 
-    if (inResume && inJD) {
-      matched.push(skill);
-    } else if (inJD && !inResume) {
-      missing.push(skill);
+    if (inJD) {
+      if (inResume) {
+        matched.push(skill);
+      } else {
+        missing.push(skill);
+      }
     }
   });
 
-  const jdSkills = skills.filter(skill => jdText.includes(skill));
+  const jdSkills = skills.filter((skill) => jdText.includes(skill));
 
-  const keywordMatch = jdSkills.length
-    ? Math.round((matched.length / jdSkills.length) * 100)
-    : 0;
+  // Better keyword score
+  const keywordScore =
+    jdSkills.length > 0
+      ? Math.round((matched.length / jdSkills.length) * 100)
+      : 50;
 
-  let formatScore = 0;
-  if (resumeText.includes("education")) formatScore += 20;
-  if (resumeText.includes("experience")) formatScore += 20;
-  if (resumeText.includes("skills")) formatScore += 20;
-  if (resumeText.length > 500) formatScore += 20;
-  if (resumeText.includes("project")) formatScore += 20;
+  // Better format score
+  let formatScore = 40; // base score
+  if (resumeText.includes("education")) formatScore += 15;
+  if (resumeText.includes("experience")) formatScore += 15;
+  if (resumeText.includes("skills")) formatScore += 15;
+  if (resumeText.includes("project")) formatScore += 15;
+  if (resumeText.length > 300) formatScore += 15;
 
-  let contentScore = 0;
+  formatScore = Math.min(formatScore, 100);
+
+  // Better content score
+  let contentScore = 30; // base score
   const actionWords = [
-    "developed", "built", "created",
-    "designed", "implemented", "led"
+    "developed",
+    "built",
+    "created",
+    "designed",
+    "implemented",
+    "led",
   ];
 
-  actionWords.forEach(word => {
+  actionWords.forEach((word) => {
     if (resumeText.includes(word)) {
-      contentScore += 15;
+      contentScore += 10;
     }
   });
 
-  if (resumeText.match(/\d+/)) contentScore += 20;
+  if (/\d+/.test(resumeText)) contentScore += 20;
 
   contentScore = Math.min(contentScore, 100);
 
+  // Final score
   const score = Math.round(
-    (keywordMatch * 0.4) +
-    (formatScore * 0.3) +
-    (contentScore * 0.3)
+    keywordScore * 0.5 +
+    formatScore * 0.25 +
+    contentScore * 0.25
   );
 
   return {
     score,
-    keywordScore: keywordMatch,
+    keywordScore,
     formatScore,
     contentScore,
     skills: matched,
@@ -68,7 +88,7 @@ export const analyzeText = (resume, jobDesc = "") => {
       "Add measurable achievements",
       "Use action verbs",
       "Improve ATS keywords",
-      "Add relevant skills from JD"
-    ]
+      "Add relevant skills from JD",
+    ],
   };
 };
